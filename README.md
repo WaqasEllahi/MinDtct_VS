@@ -1,4 +1,4 @@
-# MintDtct_VS
+# MinDtct_VS
 
 This repository is a Visual Studio project which retains a transcode/translation of the open source NIST MINDTCT that can be easily used on the Windows platform
 
