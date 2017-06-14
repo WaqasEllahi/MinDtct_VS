@@ -1,0 +1,961 @@
+ binarize - Takes a padded grayscale input image and its associated ridge
+              direction flow NMAP and produces a binarized version of the
+              image.  It then fills horizontal and vertical "holes" in the
+              binary image results.
+ binarize_V2 - Takes a padded grayscale input image and its associated
+              Direction Map and produces a binarized version of the
+              image.  It then fills horizontal and vertical "holes" in
+              the binary image results.  Note that the input image must
+              be padded sufficiently to contain in memory rotated
+              directional binarization grids applied to pixels along the
+              perimeter of the input image.
+ binarize_image - Takes a grayscale input image and its associated
+                  NMAP and generates a binarized version of the image.
+ binarize_image_V2 - Takes a grayscale input image and its associated
+              Direction Map and generates a binarized version of the
+              image.  Note that there is no "Isotropic" binarization
+              used in this version.
+ dirbinarize - Determines the binary value of a grayscale pixel based
+               on a VALID IMAP ridge flow direction.
+ isobinarize - Determines the binary value of a grayscale pixel based
+               on comparing the grayscale value with a surrounding
+               neighborhood grid of pixels.  If the current pixel (treated
+               as an average) is less than the sum of the pixels in
+               the neighborhood, then the binary value is set to BLACK,
+               otherwise it is set to WHITE.  This binarization technique
+               is used when there is no VALID IMAP direction for the
+               block in which the current pixel resides.
+ block_offsets - Divides an image into mw X mh equally sized blocks,
+       returning a list of offsets to the top left corner of each block.
+       For images that are even multiples of BLOCKSIZE, blocks do not
+       not overlap and are immediately adjacent to each other.  For image
+       that are NOT even multiples of BLOCKSIZE, blocks continue to be
+       non-overlapping up to the last column and/or last row of blocks.
+       In these cases the blocks are adjacent to the edge of the image and
+       extend inwards BLOCKSIZE units, overlapping the neighboring column
+       or row of blocks.  This routine also accounts for image padding
+       which makes things a little more "messy". This routine is primarily
+       responsible providing the ability to processs arbitrarily-sized
+       images.  The strategy used here is simple, but others are possible.
+ low_contrast_block - Takes the offset to an image block of specified
+             dimension, and analyzes the pixel intensities in the block
+             to determine if there is sufficient contrast for further
+             processing.
+ find_valid_block - Take a Direction Map, Low Contrast Map,
+             Starting block address, a direction and searches the
+             maps in the specified direction until either a block valid
+             direction is encountered or a block flagged as LOW CONTRAST
+             is encountered.  If a valid direction is located, it and the
+             address of the corresponding block are returned with a
+             code of FOUND.  Otherwise, a code of NOT_FOUND is returned.
+ set_margin_blocks - Take an image map and sets its perimeter values to
+             the specified value.
+ chain_code_loop - Converts a feature's contour points into an
+            8-connected chain code vector.  This encoding represents
+            the direction taken between each adjacent point in the
+            contour.  Chain codes may be used for many purposes, such
+            as computing the perimeter or area of an object, and they
+            may be used in object detection and recognition.
+ is_chain_clockwise - Takes an 8-connected chain code vector and
+            determines if the codes are ordered clockwise or
+            counter-clockwise.
+            The routine also requires a default return value be
+            specified in the case the the routine is not able to
+            definitively determine the chains direction.  This allows
+            the default response to be application-specific.
+ allocate_contour - Allocates the lists needed to represent the
+            contour of a minutia feature (a ridge or valley-ending).
+            This includes two lists of coordinate pairs.  The first is
+            the 8-connected chain of points interior to the feature
+            and are called the feature's "contour points".
+            The second is a list or corresponding points each
+            adjacent to its respective feature contour point in the first
+            list and on the exterior of the feature.  These second points
+            are called the feature's "edge points".  Don't be confused,
+            both lists of points are on the "edge".  The first set is
+            guaranteed 8-connected and the color of the feature.  The
+            second set is NOT guaranteed to be 8-connected and its points
+            are opposite the color of the feature.  Remeber that "feature"
+            means either ridge-ending (black pixels) or valley-ending
+            (white pixels).
+ free_contour - Deallocates the lists used to represent the
+            contour of a minutia feature (a ridge or valley-ending).
+            This includes two lists of coordinate pairs.  The first is
+            the 8-connected chain of points interior to the feature
+            and are called the feature's "contour points".
+            The second is a list or corresponding points each
+            adjacent to its respective feature contour point in the first
+            list and on the exterior of the feature.  These second points
+            are called the feature's "edge points".
+ get_high_curvature_contour - Takes the pixel coordinate of a detected
+            minutia feature point and its corresponding/adjacent edge
+            pixel and attempts to extract a contour of specified length
+            of the feature's edge.  The contour is extracted by walking
+            the feature's edge a specified number of steps clockwise and
+            then counter-clockwise. If a loop is detected while
+            extracting the contour, the contour of the loop is returned
+            with a return code of (LOOP_FOUND).  If the process fails
+            to extract a contour of total specified length, then
+            the returned contour length is set to Zero, NO allocated
+            memory is returned in this case, and the return code is set
+            to Zero.  An alternative implementation would be to return
+            the incomplete contour with a return code of (INCOMPLETE).
+            For now, NO allocated contour is returned in this case.
+ get_centered_contour - Takes the pixel coordinate of a detected
+            minutia feature point and its corresponding/adjacent edge
+            pixel and attempts to extract a contour of specified length
+            of the feature's edge.  The contour is extracted by walking
+            the feature's edge a specified number of steps clockwise and
+            then counter-clockwise. If a loop is detected while
+            extracting the contour, no contour is returned with a return
+            code of (LOOP_FOUND).  If the process fails to extract a
+            a complete contour, a code of INCOMPLETE is returned.
+ trace_contour - Takes the pixel coordinate of a detected minutia
+            feature point and its corresponding/adjacent edge pixel
+            and extracts a contour (up to a specified maximum length)
+            of the feature's edge in either a clockwise or counter-
+            clockwise direction.  A second point is specified, such that
+            if this point is encounted while extracting the contour,
+            it is to be assumed that a loop has been found and a code
+            of (LOOP_FOUND) is returned with the contour. By independently
+            specifying this point, successive calls can be made to
+            this routine from the same starting point, and loops across
+            successive calls can be detected.
+ search_contour - Walk the contour of a minutia feature starting at a
+            specified point on the feature and walking N steps in the
+            specified direction (clockwise or counter-clockwise), looking
+            for a second specified point.  In this code, "feature" is
+            consistently referring to either the black interior edge of
+            a ridge-ending or the white interior edge of a valley-ending
+            (bifurcation).  The term "edge of the feature" refers to
+            neighboring pixels on the "exterior" edge of the feature.
+            So "edge" pixels are opposite in color from the interior
+            feature pixels.
+ next_contour_pixel - Takes a pixel coordinate of a point determined
+            to be on the interior edge of a feature (ridge or valley-
+            ending), and attempts to locate a neighboring pixel on the
+            feature's contour.  Neighbors of the current feature pixel
+            are searched in a specified direction (clockwise or counter-
+            clockwise) and the first pair of adjacent/neigboring pixels
+            found with the first pixel having the color of the feature
+            and the second the opposite color are returned as the next
+            point on the contour.  One exception happens when the new
+            point is on an "exposed" corner.
+ start_scan_nbr - Takes a two pixel coordinates that are either
+            aligned north-to-south or east-to-west, and returns the
+            position the second pixel is in realtionship to the first.
+            The positions returned are based on 8-connectedness.
+            NOTE, this routine does NOT account for diagonal positions.
+ next_scan_nbr - Advances the given 8-connected neighbor index
+            on location in the specifiec direction (clockwise or
+            counter-clockwise). 
+ min_contour_theta - Takes a contour list and analyzes it locating the
+            point at which the contour has highest curvature
+            (or minimum interior angle).  The angle of curvature is
+            computed by searching a majority of points on the contour.
+            At each of these points, a left and right segment (or edge)
+            are extended out N number of pixels from the center point
+            on the contour.  The angle is formed between the straight line
+            connecting the center point to the end point on the left edge
+            and the line connecting the center point to the end of the
+            right edge.  The point of highest curvature is determined
+            by locating the where the minimum of these angles occurs.
+ contour_limits - Determines the X and Y coordinate limits of the
+                  given contour list.
+ fix_edge_pixel_pair - Takes a pair of pixel points with the first
+       pixel on a feature and the second adjacent and off the feature,
+       determines if the pair neighbor diagonally.  If they do, their
+       locations are adjusted so that the resulting pair retains the
+       same pixel values, but are neighboring either to the N,S,E or W.
+       This routine is needed in order to prepare the pixel pair for
+       contour tracing.
+ lfs_detect_minutiae - Takes a grayscale fingerprint image (of arbitrary
+          size), and returns a map of directional ridge flow in the image
+          (2 versions), a binarized image designating ridges from valleys,
+          and a list of minutiae (including position, type, direction,
+          neighbors, and ridge counts to neighbors).
+ lfs_detect_minutiae_V2 - Takes a grayscale fingerprint image (of
+          arbitrary size), and returns a set of image block maps,
+          a binarized image designating ridges from valleys,
+          and a list of minutiae (including position, reliability,
+          type, direction, neighbors, and ridge counts to neighbors).
+          The image maps include a ridge flow directional map,
+          a map of low contrast blocks, a map of low ridge flow blocks.
+          and a map of high-curvature blocks.
+ dft_dir_powers - Conducts the DFT analysis on a block of image data.
+         The image block is sampled across a range of orientations
+         (directions) and multiple wave forms of varying frequency are
+         applied at each orientation.  At each orentation, pixels are
+         accumulated along each rotated pixel row, creating a vector
+         of pixel row sums.  Each DFT wave form is then applied
+         individually to this vector of pixel row sums.  A DFT power
+         value is computed for each wave form (frequency0 at each
+         orientaion within the image block.  Therefore, the resulting DFT
+         power vectors are of dimension (N Waves X M Directions).
+         The power signatures derived form this process are used to
+         determine dominant direction flow within the image block.
+ sum_rot_block_rows - Computes a vector or pixel row sums by sampling
+               the current image block at a given orientation.  The
+               sampling is conducted using a precomputed set of rotated
+               pixel offsets (called a grid) relative to the orgin of
+               the image block.
+ dft_power - Computes the DFT power by applying a specific wave form
+             frequency to a vector of pixel row sums computed from a
+             specific orientation of the block image
+ dft_power_stats - Derives statistics from a set of DFT power vectors.
+           Statistics are computed for all but the lowest frequency
+           wave form, including the Maximum power for each wave form,
+           the direction at which the maximum power occured, and a
+           normalized value for the maximum power.  In addition, the
+           statistics are ranked in descending order based on normalized
+           squared maximum power.  These statistics are fundamental
+           to selecting a dominant direction flow for the current
+           input image block.
+ get_max_norm - Analyses a DFT power vector for a specific wave form
+                applied at different orientations (directions) to the
+                current image block.  The routine retuns the maximum
+                power value in the vector, the direction at which the
+                maximum occurs, and a normalized power value.  The
+                normalized power is computed as the maximum power divided
+                by the average power across all the directions.  These
+                simple statistics are fundamental to the selection of
+                a dominant direction flow for the image block.
+ sort_dft_waves - Creates a ranked list of DFT wave form statistics
+                  by sorting on the normalized squared maximum power.
+ free_dir2rad - Deallocates memory associated with a DIR2RAD structure
+ free_dftwaves - Deallocates the memory associated with a DFTWAVES
+                 structure
+ free_rotgrids - Deallocates the memory associated with a ROTGRIDS
+                 structure
+ free_dir_powers - Deallocate memory associated with DFT power vectors
+   get_minutiae - Takes a grayscale fingerprint image, binarizes the input
+                image, and detects minutiae points using LFS Version 2.
+                The routine passes back the detected minutiae, the
+                binarized image, and a set of image quality maps.
+ bits_6to8 - Takes an array of unsigned characters and bitwise shifts
+             each value 2 postitions to the left.  This is equivalent
+             to multiplying each value by 4.  This puts original values
+             on the range [0..64) now on the range [0..256).  Another
+             way to say this, is the original 6-bit values now fit in
+             8 bits.  This is to be used to undo the effects of bits_8to6.
+ bits_8to6 - Takes an array of unsigned characters and bitwise shifts
+             each value 2 postitions to the right.  This is equivalent
+             to dividing each value by 4.  This puts original values
+             on the range [0..256) now on the range [0..64).  Another
+             way to say this, is the original 8-bit values now fit in
+             6 bits.  I would really like to make this dependency
+             go away.
+ gray2bin - Takes an 8-bit threshold value and two 8-bit pixel values.
+            Those pixels in the image less than the threhsold are set
+            to the first specified pixel value, whereas those pixels
+            greater than or equal to the threshold are set to the second
+            specified pixel value.  On application for this routine is
+            to convert binary images from 8-bit pixels valued {0,255} to
+            {1,0} and vice versa.
+ pad_uchar_image - Copies an 8-bit grayscale images into a larger
+                   output image centering the input image so as to
+                   add a specified amount of pixel padding along the
+                   entire perimeter of the input image.  The amount of
+                   pixel padding and the intensity of the pixel padding
+                   are specified.  An alternative to padding with a
+                   constant intensity would be to copy the edge pixels
+                   of the centered image into the adjacent pad area.
+ fill_holes - Takes an input image and analyzes triplets of horizontal
+              pixels first and then triplets of vertical pixels, filling
+              in holes of width 1.  A hole is defined as the case where
+              the neighboring 2 pixels are equal, AND the center pixel
+              is different.  Each hole is filled with the value of its
+              immediate neighbors. This routine modifies the input image.
+ free_path - Traverses a straight line between 2 pixel points in an
+             image and determines if a "free path" exists between the
+             2 points by counting the number of pixel value transitions
+             between adjacent pixels along the trajectory.
+ search_in_direction - Takes a specified maximum number of steps in a
+                specified direction looking for the first occurence of
+                a pixel with specified value.  (Once found, adjustments
+                are potentially made to make sure the resulting pixel
+                and its associated edge pixel are 4-connected.)
+ init_dir2rad - Allocates and initializes a lookup table containing
+                cosine and sine values needed to convert integer IMAP
+                directions to angles in radians.
+ init_dftwaves - Allocates and initializes a set of wave forms needed
+                 to conduct DFT analysis on blocks of the input image
+ get_max_padding - Deterines the maximum amount of image pixel padding
+                   required by all LFS processes.  Padding is currently
+                   required by the rotated grids used in DFT analyses,
+                   rotated grids used in directional binarization,
+                   and in the grid used for isotropic binarization.
+                   The NIST generalized code enables the parameters
+                   governing these processes to be redefined, so a check
+                   at runtime is required to determine which process
+                   requires the most padding.  By using the maximum as
+                   the padding factor, all processes will run safely
+                   with a single padding of the input image avoiding the
+                   need to repad for further processes.
+ get_max_padding_V2 - Deterines the maximum amount of image pixel padding
+         required by all LFS (Version 2) processes.  Padding is currently
+         required by the rotated grids used in DFT analyses and in
+         directional binarization.  The NIST generalized code enables
+         the parameters governing these processes to be redefined, so a
+         check at runtime is required to determine which process
+         requires the most padding.  By using the maximum as the padding
+         factor, all processes will run safely with a single padding of
+         the input image avoiding the need to repad for further processes.
+ init_rotgrids - Allocates and initializes a set of offsets that address
+                 individual rotated pixels within a grid.
+                 These rotated grids are used to conduct DFT analyses
+                 on blocks of input image data, and they are used
+                 in isotropic binarization.
+ alloc_dir_powers - Allocates the memory associated with DFT power
+           vectors.  The DFT analysis is conducted block by block in the
+           input image, and within each block, N wave forms are applied
+           at M different directions.
+ alloc_power_stats - Allocates memory associated with set of statistics
+             derived from DFT power vectors computed in a block of the
+             input image.  Statistics are not computed for the lowest DFT
+             wave form, so the length of the statistics arrays is 1 less
+             than the number of DFT wave forms used.  The staistics
+             include the Maximum power for each wave form, the direction
+             at which the maximum power occured, and a normalized value
+             for the maximum power.  In addition, the statistics are
+             ranked in descending order based on normalized squared
+             maximum power.
+ is_image_empty - Routine determines if statistics passed indicate
+                  an empty image.
+ is_qmap_empty - Routine determines if quality map is all set to zero
+ line_points - Returns the contiguous coordinates of a line connecting
+               2 specified points.
+ link_minutiae - Clusters minutiae that are sufficiently close to each
+                other and have compatible directions to be considered part
+                of the same ridge or valley and then links them together.
+                In linking two minutia, the respective minutia features
+                in the image are joined by drawing pixels and the points
+                are removed from the list.
+ create_link_table - Builds a 2D minutia link table where each cell in the
+                    table represents a potential linking of 2 different
+                    minutia points.  Minutia IDs are stored on each axes
+                    and scores representing the degree of compatibility
+                    between 2 minutia are stored in each cell.  Note that
+                    the table is sparsely filled with scores.
+ update_link_table - Takes the indices of 2 minutia and their link
+                    compatibility score and updates the 2D link table.
+                    The input minutia are registered to positions along
+                    different axes, if they are not already in the table,
+                    and a queue is maintained so that a cluster of
+                    potentially linked points may be gathered.
+ order_link_table - Puts the link table in sorted order based on x and 
+                    then y-axis entries.  These minutia are sorted based
+                    on their point of perpendicular intersection with a
+                    line running from the origin at an angle equal to the
+                    average direction of all entries in the link table.
+ process_link_table - Processes the link table deciding which minutia
+                      pairs in the table should be linked (ie. joined in
+                      the image and removed from the minutiae list (and
+                      from onloop).
+ link_score - Takes 2 parameters, a 'join angle' and a 'join distance'
+              computed between 2 minutia and combines these to compute
+              a score representing the degree of link compatibility
+              between the 2 minutiae.
+ get_loop_list - Takes a list of minutia points and determines which
+                ones lie on loops around valleys (lakes) of a specified
+                maximum circumference.  The routine returns a list of
+                flags, one for each minutia in the input list, and if
+                the minutia is on a qualifying loop, the corresponding
+                flag is set to TRUE, otherwise it is set to FALSE.
+                If for some reason it was not possible to trace the
+                minutia's contour, then it is removed from the list.
+                This can occur due to edits dynamically taking place
+                in the image by other routines.
+ on_loop - Determines if a minutia point lies on a loop (island or lake)
+           of specified maximum circumference.
+ on_island_lake - Determines if two minutia points lie on the same loop
+                 (island or lake).  If a loop is detected, the contour
+                 points of the loop are returned.
+ on_hook - Determines if two minutia points lie on a hook on the side
+           of a ridge or valley.
+ is_loop_clockwise - Takes a feature's contour points and determines if
+            the points are ordered clockwise or counter-clockwise about
+            the feature.  The routine also requires a default return
+            value be specified in the case the the routine is not able
+            to definitively determine the contour's order.  This allows
+            the default response to be application-specific.
+ process_loop - Takes a contour list that has been determined to form
+            a complete loop, and processes it. If the loop is sufficiently
+            large and elongated, then two minutia points are calculated
+            along the loop's longest aspect axis.  If it is determined
+            that the loop does not contain minutiae, it is filled in the
+            binary image.
+ process_loop_V2 - Takes a contour list that has been determined to form
+            a complete loop, and processes it. If the loop is sufficiently
+            large and elongated, then two minutia points are calculated
+            along the loop's longest aspect axis.  If it is determined
+            that the loop does not contain minutiae, it is filled in the
+            binary image.
+ get_loop_aspect - Takes a contour list (determined to form a complete
+            loop) and measures the loop's aspect (the largest and smallest
+            distances across the loop) and returns the points on the
+            loop where these distances occur.
+ fill_loop - Takes a contour list that has been determined to form
+            a complete loop, and fills the loop accounting for
+            complex/concaved shapes.
+            NOTE, I tried using a flood-fill in place of this routine,
+            but the contour (although 8-connected) is NOT guaranteed to
+            be "complete" surrounded (in an 8-connected sense) by pixels
+            of opposite color.  Therefore, the flood would occasionally
+            escape the loop and corrupt the binary image!
+ fill_partial_row - Fills a specified range of contiguous pixels on
+            a specified row of an 8-bit pixel image with a specified
+            pixel value.  NOTE, the pixel coordinates are assumed to
+            be within the image boundaries.
+ flood_loop - Fills a given contour (determined to form a complete loop)
+            with a specified pixel value using a recursive flood-fill
+            technique.
+            NOTE, this fill approach will NOT always work with the
+            contours generated in this application because they
+            are NOT guaranteed to be ENTIRELY surrounded by 8-connected
+            pixels not equal to the fill pixel value.  This is unfortunate
+            because the flood-fill is a simple algorithm that will handle
+            complex/concaved shapes.
+ flood_fill4 - Recursively floods a region of an 8-bit pixel image with a
+               specified pixel value given a starting (seed) point.  The
+               recursion is based neighbors being 4-connected.
+ gen_image_maps - Computes a set of image maps based on Version 2
+            of the NIST LFS System.  The first map is a Direction Map
+            which is a 2D vector of integer directions, where each
+            direction represents the dominant ridge flow in a block of
+            the input grayscale image.  The Low Contrast Map flags
+            blocks with insufficient contrast.  The Low Flow Map flags
+            blocks with insufficient ridge flow.  The High Curve Map
+            flags blocks containing high curvature. This routine will
+            generate maps for an arbitrarily sized, non-square, image.
+ gen_initial_maps - Creates an initial Direction Map from the given
+             input image.  It very important that the image be properly
+             padded so that rotated grids along the boundary of the image
+             do not access unkown memory.  The rotated grids are used by a
+             DFT-based analysis to determine the integer directions
+             in the map. Typically this initial vector of directions will
+             subsequently have weak or inconsistent directions removed
+             followed by a smoothing process.  The resulting Direction
+             Map contains valid directions >= 0 and INVALID values = -1.
+             This routine also computes and returns 2 other image maps.
+             The Low Contrast Map flags blocks in the image with
+             insufficient contrast.  Blocks with low contrast have a
+             corresponding direction of INVALID in the Direction Map.
+             The Low Flow Map flags blocks in which the DFT analyses
+             could not determine a significant ridge flow.  Blocks with
+             low ridge flow also have a corresponding direction of
+             INVALID in the Direction Map.
+ interpolate_direction_map - Take a Direction Map and Low Contrast
+             Map and attempts to fill in INVALID directions in the
+             Direction Map based on a blocks valid neighbors.  The
+             valid neighboring directions are combined in a weighted
+             average inversely proportional to their distance from
+             the block being interpolated.  Low Contrast blocks are
+             used to prempt the search for a valid neighbor in a
+             specific direction, which keeps the process from
+             interpolating directions for blocks in the background and
+             and perimeter of the fingerprint in the image.
+ morph_tf_map - Takes a 2D vector of TRUE and FALSE values integers
+               and dialates and erodes the map in an attempt to fill
+               in voids in the map.
+ pixelize_map - Takes a block image map and assigns each pixel in the
+            image its corresponding block value.  This allows block
+            values in maps to be directly accessed via pixel addresses.
+ smooth_direction_map - Takes a vector of integer directions and smooths
+               them by analyzing the direction of adjacent neighbors.
+ gen_high_curve_map - Takes a Direction Map and generates a new map
+            that flags blocks with HIGH CURVATURE.
+ gen_imap - Computes an IMAP, which is a 2D vector of integer directions,
+            where each direction represents the dominant ridge flow in
+            a block of the input grayscale image.  This routine will
+            generate an IMAP for arbitrarily sized, non-square, images.
+ gen_initial_imap - Creates an initial IMAP from the given input image.
+             It very important that the image be properly padded so
+             that rotated grids along the boudary of the image do not
+             access unkown memory.  The rotated grids are used by a
+             DFT-based analysis to determine the integer directions
+             in the IMAP. Typically this initial vector of directions will
+             subsequently have weak or inconsistent directions removed
+             followed by a smoothing process.
+ primary_dir_test - Applies the primary set of criteria for selecting
+                    an IMAP integer direction from a set of DFT results
+                    computed from a block of image data
+ secondary_fork_test - Applies a secondary set of criteria for selecting
+                    an IMAP integer direction from a set of DFT results
+                    computed from a block of image data.  This test
+                    analyzes the strongest power statistics associated
+                    with a given frequency and direction and analyses
+                    small changes in direction to the left and right to
+                    determine if the block contains a "fork".
+ remove_incon_dirs - Takes a vector of integer directions and removes
+              individual directions that are too weak or inconsistent.
+              Directions are tested from the center of the IMAP working
+              outward in concentric squares, and the process resets to
+              the center and continues until no changes take place during
+              a complete pass.
+ test_top_edge - Walks the top edge of a concentric square in the IMAP,
+                 testing directions along the way to see if they should
+                 be removed due to being too weak or inconsistent with
+                 respect to their adjacent neighbors.
+ test_right_edge - Walks the right edge of a concentric square in the
+                 IMAP, testing directions along the way to see if they
+                 should be removed due to being too weak or inconsistent
+                 with respect to their adjacent neighbors.
+ test_bottom_edge - Walks the bottom edge of a concentric square in the
+               IMAP, testing directions along the way to see if they
+               should be removed due to being too weak or inconsistent
+               with respect to their adjacent neighbors.
+ test_left_edge - Walks the left edge of a concentric square in the IMAP,
+                 testing directions along the way to see if they should
+                 be removed due to being too weak or inconsistent with
+                 respect to their adjacent neighbors.
+ remove_dir - Determines if an IMAP direction should be removed based
+              on analyzing its adjacent neighbors
+ average_8nbr_dir - Given an IMAP direction, computes an average
+                    direction from its adjacent 8 neighbors returning
+                    the average direction, its strength, and the
+                    number of valid direction in the neighborhood.
+ num_valid_8nbrs - Given a block in an IMAP, counts the number of
+                   immediate neighbors that have a valid IMAP direction.
+ smooth_imap - Takes a vector of integer directions and smooths them
+               by analyzing the direction of adjacent neighbors.
+ gen_nmap - Computes an NMAP from its associated 2D vector of integer
+            directions (IMAP).  Each value in the NMAP either represents
+            a direction of dominant ridge flow in a block of the input
+            grayscale image, or it contains a codes describing why such
+            a direction was not procuded.
+            For example, blocks near areas of high-curvature (such as
+            with cores and deltas) will not produce reliable IMAP
+            directions.
+ vorticity - Measures the amount of cummulative curvature incurred
+             among the IMAP neighbors of the given block.
+ accum_nbor_vorticity - Accumlates the amount of curvature measures
+                        between neighboring IMAP blocks.
+ curvature - Measures the largest change in direction between the
+             current IMAP direction and its immediate neighbors.
+ match_1st_pair - Determines which of the feature_patterns[] have their
+            first pixel pair match the specified pixel pair.
+ match_2nd_pair - Determines which of the passed feature_patterns[] have
+            their second pixel pair match the specified pixel pair.
+ match_3rd_pair - Determines which of the passed feature_patterns[] have
+            their third pixel pair match the specified pixel pair.
+ skip_repeated_horizontal_pair - Takes the location of two pixel in
+            adjacent pixel rows within an image region and skips
+            rightward until the either the pixel pair no longer repeats
+            itself or the image region is exhausted.
+ skip_repeated_vertical_pair - Takes the location of two pixel in
+            adjacent pixel columns within an image region and skips
+            downward until the either the pixel pair no longer repeats
+            itself or the image region is exhausted.
+ alloc_minutiae - Allocates and initializes a minutia list based on the
+            specified maximum number of minutiae to be detected.
+ realloc_minutiae - Reallocates a previously allocated minutia list
+            extending its allocated length based on the specified
+            increment.
+ detect_minutiae - Takes a binary image and its associated IMAP and
+            NMAP matrices and scans each image block for potential
+            minutia points.
+ detect_minutiae_V2 - Takes a binary image and its associated
+            Direction and Low Flow Maps and scans each image block
+            with valid direction for minutia points.  Minutia points
+            detected in LOW FLOW blocks are set with lower reliability.
+ update_minutiae - Takes a detected minutia point and (if it is not
+                determined to already be in the minutiae list) adds it to
+                the list.
+ update_minutiae_V2 - Takes a detected minutia point and (if it is not
+                determined to already be in the minutiae list or the
+                new point is determined to be "more compatible") adds
+                it to the list.
+ sort_minutiae_y_x - Takes a list of minutia points and sorts them
+                 top-to-bottom and then left-to-right.
+ sort_minutiae_x_y - Takes a list of minutia points and sorts them
+                 left-to-right and then top-to-bottom.
+ rm_dup_minutiae - Takes a list of minutiae sorted in some adjacent order
+               and detects and removes redundant minutia that have the
+               same exact pixel coordinate locations (even if other
+               attributes may differ).
+ dump_minutiae - Given a minutiae list, writes a formatted text report of
+            the list's contents to the specified open file pointer.
+ dump_minutiae_pts - Given a minutiae list, writes the coordinate point
+            for each minutia in the list to the specified open
+            file pointer.
+ dump_reliable_minutiae_pts - Given a minutiae list, writes the
+            coordinate point for each minutia in the list that has
+            the specified reliability to the specified open
+            file pointer.
+ create_minutia - Takes attributes associated with a detected minutia
+            point and allocates and initializes a minutia structure.
+ free_minutiae - Takes a minutiae list and deallocates all memory
+                 associated with it.
+ free_minutia - Takes a minutia pointer and deallocates all memory
+            associated with it.
+ remove_minutia - Removes the specified minutia point from the input
+                  list of minutiae.
+ join_minutia - Takes 2 minutia points and connectes their features in
+                the input binary image.  A line is drawn in the image
+                between the 2 minutia with a specified line-width radius
+                and a conditional border of pixels opposite in color
+                from the interior line.
+ minutia_type - Given the pixel color of the detected feature, returns
+            whether the minutia is a ridge-ending (black pixel) or
+            bifurcation (white pixel).
+ is_minutia_appearing - Given the pixel location of a minutia feature
+            and its corresponding adjacent edge pixel, returns whether
+            the minutia is appearing or disappearing.  Remeber, that
+            "feature" refers to either a ridge or valley-ending.
+ choose_scan_direction - Determines the orientation (horizontal or
+            vertical) in which a block is to be scanned for minutiae.
+            The orientation is based on the blocks corresponding IMAP
+            direction.
+ scan4minutiae - Scans a block of binary image data detecting potential
+                minutiae points.
+ scan4minutiae_horizontally - Scans a specified region of binary image
+                data horizontally, detecting potential minutiae points.
+                Minutia detected via the horizontal scan process are
+                by nature vertically oriented (orthogonal to the scan).
+                The region actually scanned is slightly larger than that
+                specified.  This overlap attempts to minimize the number
+                of minutiae missed at the region boundaries.
+                HOWEVER, some minutiae will still be missed!
+ scan4minutiae_horizontally_V2 - Scans an entire binary image
+                horizontally, detecting potential minutiae points.
+                Minutia detected via the horizontal scan process are
+                by nature vertically oriented (orthogonal to the scan).
+ scan4minutiae_vertically - Scans a specified region of binary image data 
+                vertically, detecting potential minutiae points.
+                Minutia detected via the vetical scan process are
+                by nature horizontally oriented (orthogonal to  the scan).
+                The region actually scanned is slightly larger than that
+                specified.  This overlap attempts to minimize the number
+                of minutiae missed at the region boundaries.
+                HOWEVER, some minutiae will still be missed!
+ scan4minutiae_vertically_V2 - Scans an entire binary image
+                vertically, detecting potential minutiae points.
+                Minutia detected via the vetical scan process are
+                by nature horizontally oriented (orthogonal to  the scan).
+ rescan4minutiae_horizontally - Rescans portions of a block of binary
+                image data horizontally for potential minutiae.  The areas
+                rescanned within the block are based on the current
+                block's neighboring blocks' IMAP and NMAP values.
+ rescan4minutiae_vertically - Rescans portions of a block of binary
+                image data vertically for potential minutiae.  The areas
+                rescanned within the block are based on the current
+                block's neighboring blocks' IMAP and NMAP values.
+ rescan_partial_horizontally - Rescans a portion of a block of binary
+                image data horizontally based on the IMAP and NMAP values
+                of a specified neighboring block.
+ rescan_partial_vertically - Rescans a portion of a block of binary
+                image data vertically based on the IMAP and NMAP values
+                of a specified neighboring block.
+ get_nbr_block_index - Determines the block index (if one exists)
+                for a specified neighbor of a block in the image.
+ adjust_horizontal_rescan - Determines the portion of an image block to
+                be rescanned horizontally based on a specified neighbor.
+ adjust_vertical_rescan - Determines the portion of an image block to
+                be rescanned vertically based on a specified neighbor.
+ process_horizontal_scan_minutia - Takes a minutia point that was
+                detected via the horizontal scan process and
+                adjusts its location (if necessary), determines its
+                direction, and (if it is not already in the minutiae
+                list) adds it to the list.  These minutia are by nature
+                vertical in orientation (orthogonal to the scan).
+ process_horizontal_scan_minutia_V2 - Takes a minutia point that was
+                detected via the horizontal scan process and
+                adjusts its location (if necessary), determines its
+                direction, and (if it is not already in the minutiae
+                list) adds it to the list.  These minutia are by nature
+                vertical in orientation (orthogonal to the scan).
+ process_vertical_scan_minutia - Takes a minutia point that was
+                detected in via the vertical scan process and
+                adjusts its location (if necessary), determines its
+                direction, and (if it is not already in the minutiae
+                list) adds it to the list.  These minutia are by nature
+                horizontal in orientation (orthogonal to the scan).
+ process_vertical_scan_minutia_V2 - Takes a minutia point that was
+                detected in via the vertical scan process and
+                adjusts its location (if necessary), determines its
+                direction, and (if it is not already in the minutiae
+                list) adds it to the list.  These minutia are by nature
+                horizontal in orientation (orthogonal to the scan).
+ adjust_high_curvature_minutia - Takes an initial minutia point detected
+            in a high-curvature area and adjusts its location and
+            direction.  First, it walks and extracts the contour
+            of the detected feature looking for and processing any loop
+            discovered along the way.  Once the contour is extracted,
+            the point of highest-curvature is determined and used to
+            adjust the location of the minutia point.  The angle of
+            the line perpendicular to the tangent on the high-curvature
+            contour at the minutia point is used as the mintutia's
+            direction.
+ adjust_high_curvature_minutia_V2 - Takes an initial minutia point
+            in a high-curvature area and adjusts its location and
+            direction.  First, it walks and extracts the contour
+            of the detected feature looking for and processing any loop
+            discovered along the way.  Once the contour is extracted,
+            the point of highest-curvature is determined and used to
+            adjust the location of the minutia point.  The angle of
+            the line perpendicular to the tangent on the high-curvature
+            contour at the minutia point is used as the mintutia's
+            direction.
+ get_low_curvature_direction - Converts a bi-direcitonal IMAP direction
+            (based on a semi-circle) to a uni-directional value covering
+            a full circle based on the scan orientation used to detect
+            a minutia feature (horizontal or vertical) and whether the
+            detected minutia is appearing or disappearing.
+ erode_charimage_2 - Erodes an 8-bit image by setting true pixels to zero
+             if any of their 4 neighbors is zero.  Allocation of the
+             output image is the responsibility of the caller.  The
+             input image remains unchanged.  This routine will NOT
+             erode pixels indiscriminately along the image border.
+ dilate_charimage_2 - Dilates an 8-bit image by setting false pixels to
+             one if any of their 4 neighbors is non-zero.  Allocation
+             of the output image is the responsibility of the caller.
+             The input image remains unchanged.
+ get_south8_2 - Returns the value of the 8-bit image pixel 1 below the
+                current pixel if defined else it returns  (char)0.
+ get_north8_2 - Returns the value of the 8-bit image pixel 1 above the
+                current pixel if defined else it returns  (char)0.
+ get_east8_2 - Returns the value of the 8-bit image pixel 1 right of the
+               current pixel if defined else it returns  (char)0.
+ get_west8_2 - Returns the value of the 8-bit image pixel 1 left of the
+              current pixel if defined else it returns  (char)0.
+ gen_quality_map - Takes a direction map, low contrast map, low ridge
+              flow map, and high curvature map, and combines them
+              into a single map containing 5 levels of decreasing
+              quality.  This is done through a set of heuristics.
+ combined_minutia_quality - Combines quality measures derived from
+              the quality map and neighboring pixel statistics to
+              infer a reliability measure on the scale [0...1].
+ grayscale_reliability - Given a minutia point, computes a reliability
+              measure from the stdev and mean of its pixel neighborhood.
+ get_neighborhood_stats - Given a minutia point, computes the mean
+              and stdev of the 8-bit grayscale pixels values in a
+              surrounding neighborhood with specified radius.
+ reliability_fr_quality_map - Takes a set of minutiae and assigns
+              each one a reliability measure based on 1 of 5 possible
+              quality levels from its location in a quality map.
+ remove_false_minutia - Takes a list of true and false minutiae and
+                attempts to detect and remove the false minutiae based
+                on a series of tests.
+ remove_false_minutia_V2 - Takes a list of true and false minutiae and
+                attempts to detect and remove the false minutiae based
+                on a series of tests.
+ remove_holes - Removes minutia points on small loops around valleys.
+ remove_hooks - Takes a list of true and false minutiae and
+                attempts to detect and remove those false minutiae that
+                are on a hook (white or black).
+ remove_hooks_islands_lakes_overlaps - Removes minutia points on hooks,
+                islands, lakes, and overlaps and fills in small small
+                loops in the binary image and joins minutia features in
+                the image on opposite sides of an overlap.  So, this
+                routine not only prunes minutia points but it edits the
+                binary input image as well.
+ remove_islands_and_lakes - Takes a list of true and false minutiae and
+                attempts to detect and remove those false minutiae that
+                are either on a common island (filled with black pixels)
+                or a lake (filled with white pixels).
+                Note that this routine edits the binary image by filling
+                detected lakes or islands.
+ remove_malformations - Attempts to detect and remove minutia points
+            that are "irregularly" shaped.  Irregularity is measured
+            by measuring across the interior of the feature at
+            two progressive points down the feature's contour.  The
+            test is triggered if a pixel of opposite color from the
+            feture's type is found.  The ratio of the distances across
+            the feature at the two points is computed and if the ratio
+            is too large then the minutia is determined to be malformed.
+            A cursory test is conducted prior to the general tests in
+            the event that the minutia lies in a block with LOW RIDGE
+            FLOW.  In this case, the distance across the feature at
+            the second progressive contour point is measured and if
+            too large, the point is determined to be malformed.
+ remove_near_invblocks - Removes minutia points from the given list
+                that are sufficiently close to a block with invalid
+                ridge flow or to the edge of the image.
+ remove_near_invblocks_V2 - Removes minutia points from the given list
+                that are sufficiently close to a block with invalid
+                ridge flow or to the edge of the image.
+ remove_pointing_invblock - Removes minutia points that are relatively
+                close in the direction opposite the minutia to an NMAP
+                block with invalid ridge flow.
+ remove_pointing_invblock_V2 - Removes minutia points that are relatively
+                close in the direction opposite the minutia to a
+                block with INVALID ridge flow.
+ remove_overlaps - Takes a list of true and false minutiae and
+                attempts to detect and remove those false minutiae that
+                are on opposite sides of an overlap.  Note that this
+                routine does NOT edit the binary image when overlaps
+                are removed.
+ remove_pores - Attempts to detect and remove minutia points located on
+                pore-shaped valleys.
+ remove_pores_V2 - Attempts to detect and remove minutia points located on
+                   pore-shaped valleys and/or ridges.  Detection for
+                   these features are only performed in blocks with
+                   LOW RIDGE FLOW or HIGH CURVATURE.
+ remove_or_adjust_side_minutiae - Removes loops or minutia points that
+              are not on complete contours of specified length. If the
+              contour is complete, then the minutia is adjusted based
+              on a minmax analysis of the rotated y-coords of the contour.
+ remove_or_adjust_side_minutiae_V2 - Removes loops or minutia points that
+              are not on complete contours of specified length. If the
+              contour is complete, then the minutia is adjusted based
+              on a minmax analysis of the rotated y-coords of the contour.
+ write_text_results - Takes LFS results including minutiae and image
+              maps and writes them to separate formatted text files.
+ write_minutiae_XYTQ - Write just minutiae XYT's & Qualities to text
+                   file according to the specified mintuiae represenation
+ dump_map - Prints a text report to the specified open file pointer
+             of the integer values in a 2D integer vector.
+ drawmap - Draws integer direction vectors over their respective blocks
+            of an input image.  Note that the input image is modified
+            upon return form this routine.
+ drawmap2 - Draws integer direction vectors over their respective blocks
+            of an input image.  Note that the input image is modified
+            upon return form this routine.  In this version of the
+            routine, offsets to the origin of each block in the image
+            must be precomputed and passed in.
+ drawblocks - Annotates an input image with the location of each block's
+              origin.  This routine is useful to see how blocks are
+              assigned to arbitrarily-sized images that are not an even
+              width or height of the block size. In these cases the last
+              column pair and row pair of blocks overlap each other.
+              Note that the input image is modified upon return form
+              this routine.
+ drawrotgrid - Annotates an input image with a specified rotated grid.
+               This routine is useful to see the location and orientation
+               of a specific rotated grid within a specific block in the
+               image.  Note that the input image is modified upon return
+               form this routine.
+ dump_link_table - takes a link table and vectors of minutia IDs
+              assigned to its axes and prints the table's contents out
+              as formatted text to the specified open file pointer.
+ draw_direction_map - Takes the input image and a list of block offsets
+            and draws a bar in each block of the image based on the
+            values of the passed Direction Map.  The resulting image
+            is written to a Sun Rasterfile of specified name.
+ draw_TF_map - Takes the input image and a list of block offsets
+            and marks each block of the image if the corresponding
+            block is flagged in the passed map.  The resulting image
+            is written to a Sun Rasterfile of specified name.
+ count_minutiae_ridges - Takes a list of minutiae, and for each one,
+                determines its closest neighbors and counts the number
+                of interveining ridges between the minutia point and
+                each of its neighbors.
+ count_minutia_ridges - Takes a minutia, and determines its closest
+                neighbors and counts the number of interveining ridges
+                between the minutia point and each of its neighbors.
+ find_neighbors - Takes a primary minutia and a list of all minutiae
+               and locates a specified maximum number of closest neighbors
+               to the primary point.  Neighbors are searched, starting
+               in the same pixel column, below, the primary point and then
+               along consecutive and complete pixel columns in the image
+               to the right of the primary point.
+ update_nbr_dists - Takes the current list of neighbors along with a
+               primary minutia and a potential new neighbor, and
+               determines if the new neighbor is sufficiently close
+               to be added to the list of nearest neighbors.  If added,
+               it is placed in the list in its proper order based on
+               squared distance to the primary point.
+ insert_neighbor - Takes a minutia index and its squared distance to a
+               primary minutia point, and inserts them in the specified
+               position of their respective lists, shifting previously
+               stored values down and off the lists as necessary.
+ sort_neighbors - Takes a list of primary minutia and its neighboring
+               minutia indices and sorts the neighbors based on their
+               position relative to the primary minutia point.  Neighbors
+               are sorted starting vertical to the primary point and
+               proceeding clockwise.
+ ridge_count - Takes a pair of minutiae, and counts the number of
+               ridges crossed along the linear trajectory connecting
+               the 2 points in the image.
+ find_transition - Takes a pixel trajectory and a starting index, and
+               searches forward along the trajectory until the specified
+               adjacent pixel pair is found, returning the index where
+               the pair was found (the index of the second pixel).
+ validate_ridge_crossing - Takes a pair of points, a ridge start
+               transition and a ridge end transition, and walks the
+               ridge contour from thre ridge end points a specified
+               number of steps, looking for the ridge start point.
+               If found, then transitions determined not to be a valid
+               ridge crossing.
+ alloc_shape - Allocates and initializes a shape structure given the
+              the X and Y limits of the shape.
+ free_shape - Deallocates a shape structure and all its allocated
+              attributes.
+ dump_shape - Takes an initialized shape structure and dumps its contents
+            as formatted text to the specified open file pointer.
+ shape_from_contour - Converts a contour list that has been determined
+            to form a complete loop into a shape representation where
+            the contour points on each contiguous scanline of the shape
+            are stored in left-to-right order.
+ sort_row_on_x - Takes a row structure and sorts its points left-to-
+            right on X.
+ sort_indices_int_inc - Takes a list of integers and returns a list of
+                 indices referencing the integer list in increasing order.
+                 The original list of integers is also returned in sorted
+                 order.
+ sort_indices_double_inc - Takes a list of doubles and returns a list of
+                 indices referencing the double list in increasing order.
+                 The original list of doubles is also returned in sorted
+                 order.
+ bubble_sort_int_inc_2 - Takes a list of integer ranks and a corresponding
+                         list of integer attributes, and sorts the ranks
+                         into increasing order moving the attributes
+                         correspondingly.
+ bubble_sort_double_inc_2 - Takes a list of double ranks and a
+              corresponding list of integer attributes, and sorts the
+              ranks into increasing order moving the attributes
+              correspondingly.
+ bubble_sort_double_dec_2 - Conducts a simple bubble sort returning a list
+        of ranks in decreasing order and their associated items in sorted
+        order as well.
+ bubble_sort_int_inc - Takes a list of integers and sorts them into
+            increasing order using a simple bubble sort.
+ minutiae2type_9 - Takes a structure containing detected minutiae
+                and converts it into an ANSI/NIST 2000 Type-9 record
+                with Fields 001-012 populated.  Note this record is not
+                compatible with the FBI/IAFIS EFTS Version 7.
+ minutiae2field_12 - Takes a structure containing detected minutiae
+                and converts it into an ANSI/NIST 2000 Type-9.012
+                Minutiae and Ridge Count (MRC) field structure.
+                Note this is field is not compatible with the
+                FBI/IAFIS EFTS Version 7.
+ update_ANSI_NIST_lfs_results - Updates an ANSI/NIST structure by creating
+             and inserting a new Type-9 record containing the detected
+             minutiae and a Type-13 or 14 record containing the
+             resulting binarized image from LFS.
+ maxv - Determines the maximum value in the given list of integers.
+        NOTE, the list is assumed to be NOT empty!
+ minv - Determines the minimum value in the given list of integers.
+        NOTE, the list is assumed to be NOT empty!
+ minmaxs - Takes a list of integers and identifies points of relative
+           minima and maxima.  The midpoint of flat plateaus and valleys
+           are selected when they are detected.
+ distance - Takes two coordinate points and computes the
+            Euclidean distance between the two points.
+ squared_distance - Takes two coordinate points and computes the
+                    squared distance between the two points.
+ in_int_list - Determines if a specified value is store in a list of
+               integers and returns its location if found.
+ remove_from_int_list - Takes a position index into an integer list and
+                removes the value from the list, collapsing the resulting
+                list.
+ ind_incr_position_dbl - Takes a double value and a list of doubles and
+               determines where in the list the double may be inserted,
+               preserving the increasing sorted order of the list.
+ angle2line - Takes two coordinate points and computes the angle
+            to the line formed by the two points.
+ line2direction - Takes two coordinate points and computes the
+            directon (on a full circle) in which the first points
+            to the second.
+ closest_dir_dist - Takes to integer IMAP directions and determines the
+                    closest distance between them accounting for
+                    wrap-around either at the beginning or ending of
+                    the range of directions.
+ lfs2nist_minutia_XYT - Converts XYT minutiae attributes in LFS native
+        representation to NIST internal representation
+ lfs2m1_minutia_XYT - Converts XYT minutiae attributes in LFS native
+        representation to M1 (ANSI INCITS 378-2004) representation
+   lfs2nist_format - Takes a minutiae data structure and converts
+                     the XYT minutiae attributes in LFS native
+                     representation to NIST internal representation

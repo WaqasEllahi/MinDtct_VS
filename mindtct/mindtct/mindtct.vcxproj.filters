@@ -1,0 +1,210 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Source Files\an2k">
+      <UniqueIdentifier>{804a0e2a-9549-4484-9954-9fd5e218b49f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\imgtools">
+      <UniqueIdentifier>{dcaf99db-8fea-4735-938d-91e48658bcc5}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\binar.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\block.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\chaincod.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\contour.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\detect.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\dft.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\free.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\getmin.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\globals.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\imgutil.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\init.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\isempty.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\line.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\link.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\log.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\loop.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\maps.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\matchpat.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\minutia.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\morph.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\mytime.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\quality.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\remove.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\results.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\ridges.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\shape.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\sort.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\to_type9.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\update.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\util.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\xytreps.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\type1314.c">
+      <Filter>Source Files\an2k</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\alloc.c">
+      <Filter>Source Files\an2k</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\append.c">
+      <Filter>Source Files\an2k</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\update1.c">
+      <Filter>Source Files\an2k</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\value2.c">
+      <Filter>Source Files\an2k</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\insert.c">
+      <Filter>Source Files\an2k</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\type.c">
+      <Filter>Source Files\an2k</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\date.c">
+      <Filter>Source Files\an2k</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\util1.c">
+      <Filter>Source Files\an2k</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\lookup.c">
+      <Filter>Source Files\an2k</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\size.c">
+      <Filter>Source Files\an2k</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\globals1.c">
+      <Filter>Source Files\an2k</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\binpad.c">
+      <Filter>Source Files\imgtools</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\sunrast.c">
+      <Filter>Source Files\imgtools</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\bincopy.c">
+      <Filter>Source Files\imgtools</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\bitmasks.c">
+      <Filter>Source Files\imgtools</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\masks.c">
+      <Filter>Source Files\imgtools</Filter>
+    </ClCompile>
+    <ClCompile Include="scr\binfill.c">
+      <Filter>Source Files\imgtools</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="inc\lfs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\log.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\morph.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\mytime.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\an2k.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\defs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\sunrast.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\binops.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\bitmasks.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\bits.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\masks.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
